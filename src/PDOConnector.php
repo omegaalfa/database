@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types = 1);
+
 namespace Omegaalfa\Database;
 
 
@@ -7,21 +9,16 @@ use Exception;
 use PDO;
 use PDOException;
 
-/**
- * Class PDOConnector
- *
- * @package src\database
- */
 class PDOConnector
 {
 
 	/**
-	 * @var mixed
+	 * @var PDO|null
 	 */
-	private $instance;
+	private ?PDO $instance;
 
 	/**
-	 * @var array
+	 * @var array<string|int, mixed>
 	 */
 	protected array $setAttribute;
 
@@ -39,11 +36,11 @@ class PDOConnector
 
 			$dns = sprintf(
 			/** @lang text */ '%s:host=%s;port=%s;dbname=%s;charset=%s',
-				\App\env('DB_CONNECTION'),
-				\App\env('DB_HOST'),
-				\App\env('DB_PORT'),
-				\App\env('DB_DATABASE'),
-				\App\env('DB_CHARSET'),
+				$this->valideValue(\App\env('DB_CONNECTION')),
+				$this->valideValue(\App\env('DB_HOST')),
+				$this->valideValue(\App\env('DB_PORT')),
+				$this->valideValue(\App\env('DB_DATABASE')),
+				$this->valideValue(\App\env('DB_CHARSET'))
 			);
 
 
@@ -51,8 +48,8 @@ class PDOConnector
 				$this->instance = new PDO
 				(
 					$dns,
-					\App\env('DB_USERNAME'),
-					\App\env('DB_PASSWORD'),
+					$this->valideValue(\App\env('DB_USERNAME')),
+					$this->valideValue(\App\env('DB_PASSWORD')),
 					$this->setAttribute
 				);
 			}
@@ -72,11 +69,17 @@ class PDOConnector
 
 
 	/**
-	 * @return PDOConnector
+	 * @param  mixed  $value
+	 *
+	 * @return string|null
 	 */
-	public function connect(): PDOConnector
+	private function valideValue(mixed $value): ?string
 	{
-		return new PDOConnector();
+		if(is_string($value)) {
+			return $value;
+		}
+
+		return null;
 	}
 
 
@@ -90,6 +93,30 @@ class PDOConnector
 		}
 	}
 
+	/**
+	 * @return PDO
+	 */
+	public function getConnection(): PDO
+	{
+		if($this->instance === null || !$this->isConnected()) {
+			$this->connect();
+		}
+
+		if($this->instance instanceof PDO) {
+			return $this->instance;
+		}
+
+		return new PDO('');
+	}
+
+	/**
+	 * @return PDOConnector
+	 */
+	public function connect(): PDOConnector
+	{
+		return new PDOConnector();
+	}
+
 
 	/**
 	 * @return bool
@@ -98,17 +125,4 @@ class PDOConnector
 	{
 		return ($this->instance instanceof PDO);
 	}
-
-
-	/**
-	 * @return PDO
-	 */
-	public function getConnection(): PDO
-	{
-		if($this->instance == null) {
-			$this->connect();
-		}
-		return $this->instance;
-	}
 }
-
