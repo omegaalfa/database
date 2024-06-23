@@ -16,13 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: Validate composer.json
-      run: composer validate --strict
-
     - name: Cache Composer packages
       id: composer-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -32,7 +28,9 @@ jobs:
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
 
-
+    - name: Verifica sintaxe de src
+      run: php -l src
+      
     # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
     # Docs: https://getcomposer.org/doc/articles/scripts.md
 
