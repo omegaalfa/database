@@ -1,46 +1,42 @@
 <?php
 
+declare(strict_types = 1);
 
 namespace Omegaalfa\Database;
 
 
-/**
- * Class Pagination
- *
- * @package src\database\orm
- */
 class Pagination
 {
 
 	/**
 	 * @var int
 	 */
-	private int $limitPages;
+	protected int $limitPages;
 
 	/**
 	 * @var int
 	 */
-	private int $total;
+	protected int $total;
+
+	/**
+	 * @var int|float
+	 */
+	protected int|float $pages;
 
 	/**
 	 * @var int
 	 */
-	private int $pages;
+	protected int $offset;
 
 	/**
 	 * @var int
 	 */
-	private int $offset;
+	protected int $currentPage;
 
 	/**
-	 * @var int
+	 * @var ?array<string|int, mixed>
 	 */
-	private int $currentPage;
-
-	/**
-	 * @var array
-	 */
-	private array $data;
+	protected ?array $data;
 
 
 	/**
@@ -124,9 +120,9 @@ class Pagination
 	}
 
 	/**
-	 * @return int
+	 * @return int|float
 	 */
-	public function getPages(): int
+	public function getPages(): int|float
 	{
 		return $this->pages;
 	}
@@ -146,7 +142,7 @@ class Pagination
 	public function calculate(): Pagination
 	{
 		$this->pages = $this->total > 0 ? ceil($this->total / $this->limitPages) : 1;
-		$this->currentPage = $this->currentPage <= $this->pages ? $this->currentPage : $this->pages;
+		$this->currentPage = (int)min($this->currentPage, $this->pages);
 
 		return $this;
 	}
@@ -162,7 +158,7 @@ class Pagination
 	}
 
 	/**
-	 * @param  array|null  $data
+	 * @param  ?array<string|int, mixed>  $data
 	 */
 	public function setData(?array $data): void
 	{
@@ -171,9 +167,9 @@ class Pagination
 
 
 	/**
-	 * @return array
+	 * @return array<string|int, mixed>
 	 */
-	public function getPagination()
+	public function getPagination(): array
 	{
 		return get_object_vars($this);
 	}
