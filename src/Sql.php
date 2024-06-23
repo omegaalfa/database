@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Omegaalfa\Database;
 
+
 use Exception;
 use Generator;
 use PDO;
