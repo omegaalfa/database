@@ -1,0 +1,29 @@
+{
+  "name": "omegaalfa/database",
+  "description": "Library for handling database interactions.",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "wrt",
+      "email": "webdesenvolver.agenda@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.1",
+    "ext-pdo": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "omegaalfa\\Database\\": "src/"
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5 || ^10.0",
+    "friendsofphp/php-cs-fixer": "^3.0"
+  },
+  "scripts": {
+    "test": "phpunit",
+    "php-cs-fixer-dry-run": "php-cs-fixer fix --dry-run"
+  },
+  "minimum-stability": "dev"
+}
