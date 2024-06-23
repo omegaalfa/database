@@ -15,7 +15,7 @@ class PDOConnector
 	/**
 	 * @var PDO|null
 	 */
-	private ?PDO $instance;
+	private ?PDO $instance = null;
 
 	/**
 	 * @var array<string|int, mixed>
