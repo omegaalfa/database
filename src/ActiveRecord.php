@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types = 1);
+
 namespace Omegaalfa\Database;
 
 
@@ -13,12 +15,12 @@ abstract class ActiveRecord extends ConnectDB
 {
 
 	/**
-	 * @var mixed
+	 * @var array<string|int, mixed>
 	 */
-	protected mixed $content;
+	protected array $content;
 
 	/**
-	 * @var mixed
+	 * @var string
 	 */
 	protected string $table;
 
@@ -33,10 +35,10 @@ abstract class ActiveRecord extends ConnectDB
 	protected mixed $field = null;
 
 	/**
-	 * @param  array   $entity
-	 * @param  string  $field
-	 * @param  mixed   $value
-	 * @param  bool    $addslashes
+	 * @param  array<string|int, mixed>  $entity
+	 * @param  string                    $field
+	 * @param  mixed                     $value
+	 * @param  bool                      $addslashes
 	 *
 	 * @return bool
 	 */
@@ -63,8 +65,8 @@ abstract class ActiveRecord extends ConnectDB
 	}
 
 	/**
-	 * @param  array  $entity
-	 * @param  bool   $addslashes
+	 * @param  array<string|int, mixed>  $entity
+	 * @param  bool                      $addslashes
 	 *
 	 * @return bool|PDOStatement
 	 */
@@ -84,7 +86,11 @@ abstract class ActiveRecord extends ConnectDB
 			$db = $this->getDb();
 			$stmt = $db->prepare($sql);
 			if($addslashes) {
-				$entity = array_map('addslashes', $entity);
+				$entity = array_map(static function($value) {
+					if(is_string($value)) {
+						return addslashes($value);
+					}
+				}, $entity);
 			}
 
 			$stmt->execute(array_values($entity));
@@ -101,10 +107,10 @@ abstract class ActiveRecord extends ConnectDB
 	}
 
 	/**
-	 * @param  array  $entity
-	 * @param  bool   $addslashes
+	 * @param  array<string|int, mixed>  $entity
+	 * @param  bool                      $addslashes
 	 *
-	 * @return array|false
+	 * @return bool|array<string|int, mixed>
 	 */
 	protected function sqlInsertedWherePrepare(array $entity, bool $addslashes = true): bool|array
 	{
@@ -137,8 +143,8 @@ abstract class ActiveRecord extends ConnectDB
 
 
 	/**
-	 * @param  array  $entity
-	 * @param  bool   $addslashes
+	 * @param  array<string|int, mixed>  $entity
+	 * @param  bool                      $addslashes
 	 *
 	 * @return false|PDOStatement
 	 */
@@ -162,15 +168,19 @@ abstract class ActiveRecord extends ConnectDB
 			$db = $this->getDb();
 			$stmt = $db->prepare($sql);
 			if($addslashes) {
-				$entity = array_map('addslashes', $entity);
+				$entity = array_map(static function($value) {
+					if(is_string($value)) {
+						return addslashes($value);
+					}
+				}, $entity);
 			}
 			$stmt->execute(array_values($entity));
+
+			if($stmt instanceof PDOStatement) {
+				return $stmt;
+			}
 		} catch(Exception|PDOException $e) {
 			LogError($e, true, param: $this->table);
-		}
-
-		if($stmt instanceof PDOStatement) {
-			return $stmt;
 		}
 
 		return false;
@@ -178,14 +188,14 @@ abstract class ActiveRecord extends ConnectDB
 
 
 	/**
-	 * @return bool
+	 * @return false|mixed
 	 */
-	protected function foundRows(): bool
+	protected function foundRows(): mixed
 	{
 		$sql = 'SELECT FOUND_ROWS()';
 		$stmt = $this->getDb()->query($sql);
 
-		if($stmt->rowCount() > 0) {
+		if($stmt instanceof \PDOStatement && $stmt->rowCount() > 0) {
 			return $stmt->fetch(PDO::FETCH_COLUMN);
 		}
 
@@ -211,14 +221,14 @@ abstract class ActiveRecord extends ConnectDB
 	/**
 	 * @param  string  $sql
 	 *
-	 * @return array|bool
+	 * @return array<string|int, mixed>|bool
 	 * @throws Exception
 	 */
 	protected function exSql(string $sql): bool|array
 	{
 		$stmt = $this->getDb()->query($sql);
 
-		if($stmt->rowCount() > 0) {
+		if($stmt instanceof \PDOStatement && $stmt->rowCount() > 0) {
 			return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -227,17 +237,17 @@ abstract class ActiveRecord extends ConnectDB
 
 
 	/**
-	 * @param  string  $sql
-	 * @param  array   $params
+	 * @param  string                    $sql
+	 * @param  array<string|int, mixed>  $params
 	 *
-	 * @return array
+	 * @return array<string|int, mixed>
 	 */
 	protected function exSqlPrepare(string $sql, array $params): array
 	{
 		$stmt = $this->getDb()->prepare($sql);
 		$stmt->execute($params);
 
-		if($stmt->rowCount() > 0) {
+		if($stmt instanceof \PDOStatement && $stmt->rowCount() > 0) {
 			return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		}
 
@@ -252,32 +262,23 @@ abstract class ActiveRecord extends ConnectDB
 		return new Sql();
 	}
 
-	/**
-	 *
-	 */
-	private function __clone()
-	{
-		if($this->isset($this->content[$this->idField])) {
-			$this->unset($this->content[$this->idField]);
-		}
-	}
 
 	/**
-	 * @param $parameter
+	 * @param  mixed  $parameter
 	 *
 	 * @return bool
 	 */
-	public function isset($parameter): bool
+	public function isset(mixed $parameter): bool
 	{
 		return isset($this->content[$parameter]);
 	}
 
 	/**
-	 * @param $parameter
+	 * @param  mixed  $parameter
 	 *
 	 * @return bool
 	 */
-	public function unset($parameter): bool
+	public function unset(mixed $parameter): bool
 	{
 		if(isset($parameter)) {
 			unset($this->content[$parameter]);
