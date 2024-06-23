@@ -1,0 +1,535 @@
+<?php
+
+
+namespace Omegaalfa\Database;
+
+
+use Exception;
+use PDO;
+use PDOException;
+
+/**
+ *
+ * @package Omegaalfa\Database
+ */
+class Sql extends ConnectDB
+{
+
+	/**
+	 * @var string
+	 */
+	private string $table;
+
+	/**
+	 * @var array<array<int, mixed>>
+	 */
+	private array $fields = [];
+
+	/**
+	 * @var array<int, mixed>
+	 */
+	private array $from = [];
+
+	/**
+	 * @var array<int, mixed>
+	 */
+	private array $where = [];
+
+	/**
+	 * @var array<int, mixed>
+	 */
+	private array $like = [];
+
+	/**
+	 * @var ?array<int, mixed>
+	 */
+	private ?array $orderBy = [];
+
+	/**
+	 * @var ?array<int, mixed>
+	 */
+	private ?array $limit = [];
+
+	/**
+	 * @var array<int, mixed>
+	 */
+	private array $join = [];
+
+	/**
+	 * @var string
+	 */
+	private string $sql = '';
+
+	/**
+	 * @var string
+	 */
+	private string $alias;
+
+	/**
+	 * @var int
+	 */
+	private int $rowsCount;
+
+	/**
+	 * @var ?array<string, mixed>
+	 */
+	private ?array $data;
+
+	/**
+	 * @var bool
+	 */
+	private bool $pagination = false;
+
+
+	/**
+	 * @param  array<list>  $fields
+	 *
+	 * @return Sql
+	 */
+	public function select(array $fields = ['*']): Sql
+	{
+		$this->fields = $fields;
+
+		return $this;
+	}
+
+	/**
+	 * @param  string  $table
+	 * @param  string  $alias
+	 *
+	 * @return Sql
+	 */
+	public function from(string $table, string $alias): Sql
+	{
+		$this->table = $table;
+		$this->alias = $alias;
+		$this->from[] = $table . ' AS ' . $alias;
+
+		return $this;
+	}
+
+
+	/**
+	 * @param  array|null  $condition
+	 * @param  string      $operator
+	 * @param  bool        $alias
+	 *
+	 * @return Sql
+	 */
+	public function where(?array $condition, string $operator = "=", bool $alias = false): Sql
+	{
+		if(is_null($condition)) {
+			$this->where = [];
+		}
+
+		if(is_array($condition) && !$alias) {
+			foreach($condition as $key => $value) {
+				$this->where[] = sprintf("%s %s '%s'", $key, $operator, $value);
+			}
+		}
+
+		if(is_array($condition) && $alias) {
+			foreach($condition as $key => $value) {
+				$this->where[] = sprintf("%s.%s %s '%s'", $this->alias, $key, $operator, $value);
+			}
+		}
+
+		return $this;
+	}
+
+
+	/**
+	 * @param  array|null  $condition
+	 *
+	 * @return Sql
+	 */
+	public function like(array|null $condition): Sql
+	{
+		if(is_null($condition)) {
+			$this->like = [];
+		}
+
+		if(is_array($condition)) {
+			foreach($condition as $key => $value) {
+				$this->like[] = sprintf("%s LIKE '%s%s%s'", $key, '%', $value, '%');
+			}
+		}
+
+		return $this;
+	}
+
+
+	/**
+	 * @param  array|null  $condition
+	 *
+	 * @return $this
+	 */
+	public function likeLeft(array|null $condition): Sql
+	{
+		if(is_null($condition)) {
+			$this->like = [];
+		}
+
+		if(is_array($condition)) {
+			foreach($condition as $key => $value) {
+				$this->like[] = sprintf("%s LIKE '%s%s'", $key, '%', $value);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param  ?array<int, mixed>  $condition
+	 *
+	 * @return $this
+	 */
+	public function likeRight(array|null $condition): Sql
+	{
+		if(is_null($condition)) {
+			$this->like = [];
+		}
+
+		if(is_array($condition)) {
+			foreach($condition as $key => $value) {
+				$this->like[] = sprintf("%s LIKE '%s%s'", $key, $value, '%');
+			}
+		}
+
+		return $this;
+	}
+
+
+	/**
+	 * @param  array|null  $condition
+	 *
+	 * @return Sql
+	 */
+	public function orderBy(?array $condition): Sql
+	{
+		if(is_null($condition)) {
+			$this->orderBy = [];
+		}
+
+		if(is_array($condition)) {
+			foreach($condition as $key => $value) {
+				$this->orderBy[] = sprintf("%s %s", $key, $value);
+			}
+		}
+
+		return $this;
+	}
+
+
+	/**
+	 * @param  string|null  $field
+	 *
+	 * @return mixed
+	 */
+	public function count(?string $field): mixed
+	{
+		if($this->where) {
+			$this->sql = sprintf(/** @lang text */ "SELECT COUNT(%s) FROM %s WHERE %s", $field, $this->table,
+				implode(' AND ', $this->where));
+		}
+
+		if(!$this->where) {
+			$this->sql = sprintf(/** @lang text */ "SELECT COUNT(%s) FROM %s", $field, $this->table);
+		}
+
+		if($this->where && $this->join) {
+			$this->sql = sprintf(/** @lang text */ "SELECT COUNT(%s) FROM %s %s WHERE %s", $field, $this->table,
+				implode(' ', $this->join),
+				implode(' AND ', $this->where),
+			);
+		}
+
+		$this->query($this->sql)->getData();
+
+		if(isset($this->data)) {
+			return current($this->data)["COUNT({$field})"];
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param  bool         $current
+	 * @param  string|null  $value
+	 *
+	 * @return array|null
+	 */
+	public function getData(bool $current = false, string $value = null): ?array
+	{
+		if($current && $value) {
+			return current($this->data[$value]);
+		}
+
+		if(!$current && $value) {
+			return $this->data[$value] ?? null;
+		}
+
+		return $this->data ?? null;
+	}
+
+	/**
+	 * @param $sql
+	 *
+	 * @return $this
+	 */
+	private function query($sql): Sql
+	{
+		try {
+			$stmt = $this->getDb()->prepare($sql);
+			$stmt->execute();
+
+			if($stmt->rowCount() > 0) {
+				$this->data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			}
+		} catch(Exception $e) {
+			LogError($e);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param  int|null  $limit
+	 * @param  int|null  $offset
+	 *
+	 * @return $this
+	 */
+	public function limit(?int $limit, ?int $offset): Sql
+	{
+		if(!is_null($limit) && !is_null($offset)) {
+			$this->limit[] = sprintf("%s,%s", $limit, $offset);
+		}
+
+		if(is_null($limit) || is_null($offset)) {
+			$this->limit = null;
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param  array|null  $condition
+	 *
+	 * @return Sql
+	 */
+	public function whereIn(?array $condition): Sql
+	{
+		if(is_array($condition)) {
+			foreach($condition as $key => $value) {
+				$this->where[] = sprintf("%s = %s", $key, $value);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param  string  $table
+	 * @param  string  $key
+	 * @param  string  $ref
+	 * @param  string  $operator
+	 *
+	 * @return Sql
+	 */
+	public function innerJoin(string $table, string $key, string $ref, string $operator = '='): Sql
+	{
+		$this->join[] = sprintf('INNER JOIN %s ON %s.%s%s%s',
+			$table, $table, $key, $operator, $ref
+		);
+
+		return $this;
+	}
+
+	/**
+	 * @param  bool  $current
+	 * @param  bool  $countRows
+	 * @param  bool  $pagination
+	 * @param  bool  $data
+	 *
+	 * @return array|null
+	 */
+	public function execute(bool $current = false, bool $countRows = false, bool $pagination = false, bool $data = true): null|array
+	{
+		$stmt = $this->getDb()->query($this);
+		$this->pagination = $pagination;
+		if($pagination && isset($this->limit)) {
+			return $this->paginationQuery($this->foundRows());
+		}
+
+		if($stmt->rowCount() > 0) {
+			if($data) {
+				$this->data['data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			}
+
+			if(!$data) {
+				$this->data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			}
+
+			if($current && $data) {
+				$this->data['data'] = current($this->data['data']);
+			}
+
+			if($current && !$data) {
+				$this->data = current($this->data);
+			}
+
+			if($countRows) {
+				$this->rowsCount = $stmt->rowCount();
+			}
+
+			return $this->data;
+		}
+
+		return [];
+	}
+
+	/**
+	 * @param  int  $allRegisters
+	 *
+	 * @return array
+	 */
+	private function paginationQuery(int $allRegisters): array
+	{
+		$pagination = $this->createPagination($allRegisters);
+		$this->limit = [$pagination->calculate()->getLimit()];
+		$pagination->setData($this->query($this->__toString())->getData());
+
+		return $pagination->getPagination();
+	}
+
+
+	/**
+	 * @param  int  $allRegisters
+	 *
+	 * @return Pagination
+	 */
+	public function createPagination(int $allRegisters): Pagination
+	{
+		$value = $this->limit[0];
+		if(!is_string($value)) {
+			$value = '0,10';
+		}
+		$queryLimit = explode(',', $value);
+		$currentPage = (int)($queryLimit[0] ?? 1);
+		$limitPages = (int)($queryLimit[1] ?? 5);
+
+		return new Pagination($allRegisters, $currentPage, $limitPages);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function __toString(): string
+	{
+		$distinctClause = ($this->pagination ? 'SQL_CALC_FOUND_ROWS' : '');
+
+		$sqlParts = [
+			'SELECT',
+			$distinctClause,
+			implode(', ', $this->fields),
+			'FROM',
+			implode(', ', $this->from)
+		];
+
+		if($this->join) {
+			$sqlParts[] = implode(' ', $this->join);
+		}
+
+		if($this->where) {
+			$sqlParts[] = 'WHERE';
+			$sqlParts[] = implode(' AND ', $this->where);
+		}
+
+		if($this->like) {
+			$sqlParts[] = 'AND';
+			$sqlParts[] = implode(' AND ', $this->like);
+		}
+
+		if($this->orderBy) {
+			$sqlParts[] = 'ORDER BY';
+			$sqlParts[] = implode(' ', $this->orderBy);
+		}
+
+		if($this->limit) {
+			$sqlParts[] = 'LIMIT';
+			$sqlParts[] = implode(', ', $this->limit);
+		}
+
+		return implode(' ', $sqlParts);
+	}
+
+
+	/**
+	 * @param  bool  $pagination
+	 *
+	 * @return Sql
+	 */
+	public function setPagination(bool $pagination): Sql
+	{
+		$this->pagination = $pagination;
+		return $this;
+	}
+
+
+	/**
+	 * @return mixed
+	 */
+	protected function foundRows(): mixed
+	{
+		$sql = 'SELECT FOUND_ROWS()';
+		$stmt = $this->getDb()->query($sql);
+		$total = 0;
+
+		if($stmt->rowCount() > $total) {
+			return $stmt->fetch(PDO::FETCH_COLUMN);
+		}
+
+		return $total;
+	}
+
+	/**
+	 * @param  bool  $countRows
+	 * @param  bool  $pagination
+	 *
+	 * @return iterable
+	 * @throws Exception
+	 */
+	public function executeLines(bool $countRows = false, bool $pagination = false): iterable
+	{
+		try {
+			$stmt = $this->getDb()->query($this);
+
+			if($pagination && isset($this->limit)) {
+				return $this->paginationQuery($this->foundRows());
+			}
+
+			if($stmt->rowCount() > 0) {
+				if($countRows) {
+					$this->rowsCount = $stmt->rowCount();
+				}
+
+				while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+					yield $row;
+				}
+			}
+		} catch(PDOException $e) {
+			LogError($e);
+		}
+
+		return [];
+	}
+
+	/**
+	 * @return int|null
+	 */
+	public function getRowsCount(): ?int
+	{
+		return $this->rowsCount ?? null;
+	}
+
+}
