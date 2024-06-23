@@ -1,17 +1,14 @@
 <?php
 
+declare(strict_types = 1);
 
 namespace Omegaalfa\Database;
 
-
 use Exception;
+use Generator;
 use PDO;
 use PDOException;
 
-/**
- *
- * @package Omegaalfa\Database
- */
 class Sql extends ConnectDB
 {
 
@@ -21,37 +18,37 @@ class Sql extends ConnectDB
 	private string $table;
 
 	/**
-	 * @var array<array<int, mixed>>
+	 * @var array<string|int, mixed>
 	 */
 	private array $fields = [];
 
 	/**
-	 * @var array<int, mixed>
+	 * @var array<string|int, mixed>
 	 */
 	private array $from = [];
 
 	/**
-	 * @var array<int, mixed>
+	 * @var array<string|int, mixed>
 	 */
 	private array $where = [];
 
 	/**
-	 * @var array<int, mixed>
+	 * @var array<string|int, mixed>
 	 */
 	private array $like = [];
 
 	/**
-	 * @var ?array<int, mixed>
+	 * @var ?array<string|int, mixed>
 	 */
 	private ?array $orderBy = [];
 
 	/**
-	 * @var ?array<int, mixed>
+	 * @var ?array<string|int, mixed>
 	 */
 	private ?array $limit = [];
 
 	/**
-	 * @var array<int, mixed>
+	 * @var array<string|int, mixed>
 	 */
 	private array $join = [];
 
@@ -71,7 +68,7 @@ class Sql extends ConnectDB
 	private int $rowsCount;
 
 	/**
-	 * @var ?array<string, mixed>
+	 * @var ?array<string|int, mixed>
 	 */
 	private ?array $data;
 
@@ -82,7 +79,7 @@ class Sql extends ConnectDB
 
 
 	/**
-	 * @param  array<list>  $fields
+	 * @param  array<string|int, mixed>  $fields
 	 *
 	 * @return Sql
 	 */
@@ -110,9 +107,9 @@ class Sql extends ConnectDB
 
 
 	/**
-	 * @param  array|null  $condition
-	 * @param  string      $operator
-	 * @param  bool        $alias
+	 * @param  ?array<string|int, mixed>  $condition
+	 * @param  string                     $operator
+	 * @param  bool                       $alias
 	 *
 	 * @return Sql
 	 */
@@ -124,13 +121,17 @@ class Sql extends ConnectDB
 
 		if(is_array($condition) && !$alias) {
 			foreach($condition as $key => $value) {
-				$this->where[] = sprintf("%s %s '%s'", $key, $operator, $value);
+				if($key && $value) {
+					$this->where[] = sprintf("%s %s '%s'", $key, $operator, $value);
+				}
 			}
 		}
 
 		if(is_array($condition) && $alias) {
 			foreach($condition as $key => $value) {
-				$this->where[] = sprintf("%s.%s %s '%s'", $this->alias, $key, $operator, $value);
+				if($key && $value) {
+					$this->where[] = sprintf("%s.%s %s '%s'", $this->alias, $key, $operator, $value);
+				}
 			}
 		}
 
@@ -139,7 +140,7 @@ class Sql extends ConnectDB
 
 
 	/**
-	 * @param  array|null  $condition
+	 * @param  ?array<string|int, mixed>  $condition
 	 *
 	 * @return Sql
 	 */
@@ -151,7 +152,9 @@ class Sql extends ConnectDB
 
 		if(is_array($condition)) {
 			foreach($condition as $key => $value) {
-				$this->like[] = sprintf("%s LIKE '%s%s%s'", $key, '%', $value, '%');
+				if(is_bool($value) || is_float($value) || is_int($value) || is_string($value) || is_null($value)) {
+					$this->like[] = sprintf("%s LIKE '%s%s%s'", $key, '%', $value, '%');
+				}
 			}
 		}
 
@@ -160,7 +163,7 @@ class Sql extends ConnectDB
 
 
 	/**
-	 * @param  array|null  $condition
+	 * @param ?array<string|int, mixed>  $condition
 	 *
 	 * @return $this
 	 */
@@ -172,7 +175,9 @@ class Sql extends ConnectDB
 
 		if(is_array($condition)) {
 			foreach($condition as $key => $value) {
-				$this->like[] = sprintf("%s LIKE '%s%s'", $key, '%', $value);
+				if(is_bool($value) || is_float($value) || is_int($value) || is_string($value) || is_null($value)) {
+					$this->like[] = sprintf("%s LIKE '%s%s'", $key, '%', $value);
+				}
 			}
 		}
 
@@ -180,7 +185,7 @@ class Sql extends ConnectDB
 	}
 
 	/**
-	 * @param  ?array<int, mixed>  $condition
+	 * @param  ?array<string|int, mixed>  $condition
 	 *
 	 * @return $this
 	 */
@@ -192,7 +197,9 @@ class Sql extends ConnectDB
 
 		if(is_array($condition)) {
 			foreach($condition as $key => $value) {
-				$this->like[] = sprintf("%s LIKE '%s%s'", $key, $value, '%');
+				if(is_bool($value) || is_float($value) || is_int($value) || is_string($value) || is_null($value)) {
+					$this->like[] = sprintf("%s LIKE '%s%s'", $key, $value, '%');
+				}
 			}
 		}
 
@@ -201,7 +208,7 @@ class Sql extends ConnectDB
 
 
 	/**
-	 * @param  array|null  $condition
+	 * @param  ?array<string|int, mixed>  $condition
 	 *
 	 * @return Sql
 	 */
@@ -213,7 +220,9 @@ class Sql extends ConnectDB
 
 		if(is_array($condition)) {
 			foreach($condition as $key => $value) {
-				$this->orderBy[] = sprintf("%s %s", $key, $value);
+				if(is_bool($value) || is_float($value) || is_int($value) || is_string($value) || is_null($value)) {
+					$this->orderBy[] = sprintf("%s %s", $key, $value);
+				}
 			}
 		}
 
@@ -246,7 +255,7 @@ class Sql extends ConnectDB
 
 		$this->query($this->sql)->getData();
 
-		if(isset($this->data)) {
+		if(is_array($this->data) && $this->data) {
 			return current($this->data)["COUNT({$field})"];
 		}
 
@@ -257,15 +266,15 @@ class Sql extends ConnectDB
 	 * @param  bool         $current
 	 * @param  string|null  $value
 	 *
-	 * @return array|null
+	 * @return ?array<string|int, mixed>
 	 */
 	public function getData(bool $current = false, string $value = null): ?array
 	{
-		if($current && $value) {
+		if($current && $value && isset($this->data[$value]) && is_array($this->data[$value])) {
 			return current($this->data[$value]);
 		}
 
-		if(!$current && $value) {
+		if(!$current && $value && is_array($this->data) && $this->data) {
 			return $this->data[$value] ?? null;
 		}
 
@@ -273,14 +282,14 @@ class Sql extends ConnectDB
 	}
 
 	/**
-	 * @param $sql
+	 * @param  string  $sql
 	 *
-	 * @return $this
+	 * @return Sql
 	 */
-	private function query($sql): Sql
+	private function query(string $sql): Sql
 	{
 		try {
-			$stmt = $this->getDb()->prepare($sql);
+			$stmt = ($this->getDb()->prepare($sql));
 			$stmt->execute();
 
 			if($stmt->rowCount() > 0) {
@@ -313,7 +322,7 @@ class Sql extends ConnectDB
 	}
 
 	/**
-	 * @param  array|null  $condition
+	 * @param  ?array<string|int, mixed>  $condition
 	 *
 	 * @return Sql
 	 */
@@ -321,7 +330,9 @@ class Sql extends ConnectDB
 	{
 		if(is_array($condition)) {
 			foreach($condition as $key => $value) {
-				$this->where[] = sprintf("%s = %s", $key, $value);
+				if(is_bool($value) || is_float($value) || is_int($value) || is_string($value) || is_null($value)) {
+					$this->where[] = sprintf("%s = %s", $key, $value);
+				}
 			}
 		}
 
@@ -345,23 +356,24 @@ class Sql extends ConnectDB
 		return $this;
 	}
 
+
 	/**
 	 * @param  bool  $current
 	 * @param  bool  $countRows
 	 * @param  bool  $pagination
 	 * @param  bool  $data
 	 *
-	 * @return array|null
+	 * @return mixed
 	 */
-	public function execute(bool $current = false, bool $countRows = false, bool $pagination = false, bool $data = true): null|array
+	public function execute(bool $current = false, bool $countRows = false, bool $pagination = false, bool $data = true): mixed
 	{
-		$stmt = $this->getDb()->query($this);
+		$stmt = $this->getDb()->query($this->__toString());
 		$this->pagination = $pagination;
 		if($pagination && isset($this->limit)) {
 			return $this->paginationQuery($this->foundRows());
 		}
 
-		if($stmt->rowCount() > 0) {
+		if($stmt instanceof \PDOStatement && $stmt->rowCount() > 0) {
 			if($data) {
 				$this->data['data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 			}
@@ -391,7 +403,7 @@ class Sql extends ConnectDB
 	/**
 	 * @param  int  $allRegisters
 	 *
-	 * @return array
+	 * @return array<string|int, mixed>
 	 */
 	private function paginationQuery(int $allRegisters): array
 	{
@@ -410,11 +422,11 @@ class Sql extends ConnectDB
 	 */
 	public function createPagination(int $allRegisters): Pagination
 	{
-		$value = $this->limit[0];
-		if(!is_string($value)) {
-			$value = '0,10';
+		$value = $this->limit[0] ?? '0,10';
+
+		if(is_string($value)) {
+			$queryLimit = explode(',', $value);
 		}
-		$queryLimit = explode(',', $value);
 		$currentPage = (int)($queryLimit[0] ?? 1);
 		$limitPages = (int)($queryLimit[1] ?? 5);
 
@@ -477,16 +489,19 @@ class Sql extends ConnectDB
 
 
 	/**
-	 * @return mixed
+	 * @return int
 	 */
-	protected function foundRows(): mixed
+	protected function foundRows(): int
 	{
 		$sql = 'SELECT FOUND_ROWS()';
-		$stmt = $this->getDb()->query($sql);
+		$stmt = $this->getDb()->query($this->__toString());
 		$total = 0;
 
-		if($stmt->rowCount() > $total) {
-			return $stmt->fetch(PDO::FETCH_COLUMN);
+		if($stmt instanceof \PDOStatement && $stmt->rowCount() > $total) {
+			$total = $stmt->fetch(PDO::FETCH_COLUMN);
+			if(!is_int($total)) {
+				return 0;
+			}
 		}
 
 		return $total;
@@ -496,19 +511,18 @@ class Sql extends ConnectDB
 	 * @param  bool  $countRows
 	 * @param  bool  $pagination
 	 *
-	 * @return iterable
-	 * @throws Exception
+	 * @return Generator|array<string|int, mixed>
 	 */
-	public function executeLines(bool $countRows = false, bool $pagination = false): iterable
+	public function executeLines(bool $countRows = false, bool $pagination = false): array|Generator
 	{
 		try {
-			$stmt = $this->getDb()->query($this);
+			$stmt = $this->getDb()->query($this->__toString());
 
 			if($pagination && isset($this->limit)) {
 				return $this->paginationQuery($this->foundRows());
 			}
 
-			if($stmt->rowCount() > 0) {
+			if($stmt instanceof \PDOStatement && $stmt->rowCount() > 0) {
 				if($countRows) {
 					$this->rowsCount = $stmt->rowCount();
 				}
