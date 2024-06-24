@@ -56,7 +56,11 @@ abstract class ActiveRecord extends ConnectDB
 		$entity[] = $value;
 
 		if($addslashes) {
-			$entity = array_map('addslashes', $entity);
+			$entity = array_map(static function($value) {
+				if(is_string($value)) {
+					return addslashes($value);
+				}
+			}, $entity);
 		}
 
 		$stmt->execute(array_values($entity));
