@@ -9,6 +9,8 @@ use Exception;
 use Generator;
 use PDO;
 use PDOException;
+use PDOStatement;
+
 
 class Sql extends ConnectDB
 {
@@ -365,6 +367,7 @@ class Sql extends ConnectDB
 	 * @param  bool  $data
 	 *
 	 * @return mixed
+	 * @throws Exception
 	 */
 	public function execute(bool $current = false, bool $countRows = false, bool $pagination = false, bool $data = true): mixed
 	{
@@ -374,7 +377,7 @@ class Sql extends ConnectDB
 			return $this->paginationQuery($this->foundRows());
 		}
 
-		if($stmt instanceof \PDOStatement && $stmt->rowCount() > 0) {
+		if($stmt instanceof PDOStatement && $stmt->rowCount() > 0) {
 			if($data) {
 				$this->data['data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 			}
@@ -491,14 +494,15 @@ class Sql extends ConnectDB
 
 	/**
 	 * @return int
+	 * @throws Exception
 	 */
 	protected function foundRows(): int
 	{
 		$sql = 'SELECT FOUND_ROWS()';
-		$stmt = $this->getDb()->query($this->__toString());
+		$stmt = $this->getDb()->query($sql);
 		$total = 0;
 
-		if($stmt instanceof \PDOStatement && $stmt->rowCount() > $total) {
+		if($stmt instanceof PDOStatement && $stmt->rowCount() > $total) {
 			$total = $stmt->fetch(PDO::FETCH_COLUMN);
 			if(!is_int($total)) {
 				return 0;
@@ -512,7 +516,8 @@ class Sql extends ConnectDB
 	 * @param  bool  $countRows
 	 * @param  bool  $pagination
 	 *
-	 * @return Generator|array<string|int, mixed>
+	 * @return array<string|int, mixed>|Generator
+	 * @throws Exception
 	 */
 	public function executeLines(bool $countRows = false, bool $pagination = false): array|Generator
 	{
@@ -523,7 +528,7 @@ class Sql extends ConnectDB
 				return $this->paginationQuery($this->foundRows());
 			}
 
-			if($stmt instanceof \PDOStatement && $stmt->rowCount() > 0) {
+			if($stmt instanceof PDOStatement && $stmt->rowCount() > 0) {
 				if($countRows) {
 					$this->rowsCount = $stmt->rowCount();
 				}
