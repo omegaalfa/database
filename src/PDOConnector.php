@@ -25,8 +25,15 @@ class PDOConnector
 	/**
 	 * @throws Exception
 	 */
-	public function __construct()
-	{
+	public function __construct(
+		protected string $dbConnect,
+		protected string $dbHost,
+		protected string $dbPort,
+		protected string $dbase,
+		protected string $dbCharset,
+		protected string $dbUsername,
+		protected string $dbPassword
+	) {
 		try {
 			$this->setAttribute = [
 				PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8',
@@ -36,22 +43,15 @@ class PDOConnector
 
 			$dns = sprintf(
 			/** @lang text */ '%s:host=%s;port=%s;dbname=%s;charset=%s',
-				$this->valideValue(\App\env('DB_CONNECTION')),
-				$this->valideValue(\App\env('DB_HOST')),
-				$this->valideValue(\App\env('DB_PORT')),
-				$this->valideValue(\App\env('DB_DATABASE')),
-				$this->valideValue(\App\env('DB_CHARSET'))
+				$dbConnect,
+				$dbHost,
+				$dbPort,
+				$dbase,
+				$dbCharset
 			);
 
-
 			if(!$this->isConnected()) {
-				$this->instance = new PDO
-				(
-					$dns,
-					$this->valideValue(\App\env('DB_USERNAME')),
-					$this->valideValue(\App\env('DB_PASSWORD')),
-					$this->setAttribute
-				);
+				$this->instance = new PDO($dns, $dbUsername, $dbPassword, $this->setAttribute);
 			}
 		} catch(PDOException $e) {
 			echo 'Error: ' . $e->getmessage();
@@ -67,22 +67,6 @@ class PDOConnector
 	{
 	}
 
-
-	/**
-	 * @param  mixed  $value
-	 *
-	 * @return string|null
-	 */
-	private function valideValue(mixed $value): ?string
-	{
-		if(is_string($value)) {
-			return $value;
-		}
-
-		return null;
-	}
-
-
 	/**
 	 *
 	 */
@@ -95,6 +79,7 @@ class PDOConnector
 
 	/**
 	 * @return PDO
+	 * @throws Exception
 	 */
 	public function getConnection(): PDO
 	{
@@ -111,10 +96,20 @@ class PDOConnector
 
 	/**
 	 * @return PDOConnector
+	 * @throws Exception
 	 */
 	public function connect(): PDOConnector
 	{
-		return new PDOConnector();
+		return new PDOConnector(
+			$this->dbConnect,
+			$this->dbHost,
+			$this->dbPort,
+			$this->dbase,
+			$this->dbCharset,
+			$this->dbUsername,
+			$this->dbPassword,
+
+		);
 	}
 
 
