@@ -5,10 +5,16 @@ declare(strict_types = 1);
 namespace Omegaalfa\Database;
 
 
+use Exception;
 use PDO;
-use Omegaalfa\Database\PDOConnector;
+use src\database\PDOConnector;
 
 
+/**
+ * Class ConnectDB
+ *
+ * @package src\database\orm
+ */
 abstract class ConnectDB
 {
 
@@ -18,14 +24,41 @@ abstract class ConnectDB
 	protected PDOConnector $conn;
 
 
-	public function __construct()
-	{
-		$this->conn = new PDOConnector();
+	/**
+	 * @param  string  $dbConnect
+	 * @param  string  $dbHost
+	 * @param  string  $dbPort
+	 * @param  string  $dbase
+	 * @param  string  $dbUsername
+	 * @param  string  $dbPassword
+	 * @param  string  $dbCharset
+	 *
+	 * @throws Exception
+	 */
+	public function __construct(
+		string $dbConnect,
+		string $dbHost,
+		string $dbPort,
+		string $dbase,
+		string $dbUsername,
+		string $dbPassword,
+		string $dbCharset = 'utf8'
+	) {
+		$this->conn = new PDOConnector(
+			dbConnect: $dbConnect,
+			dbHost: $dbHost,
+			dbPort: $dbPort,
+			dbase: $dbase,
+			dbCharset: $dbCharset,
+			dbUsername: $dbUsername,
+			dbPassword: $dbPassword
+		);
 	}
 
 
 	/**
 	 * @return PDO
+	 * @throws Exception
 	 */
 	protected function getDb(): PDO
 	{
@@ -34,9 +67,8 @@ abstract class ConnectDB
 
 
 	/**
-	 * Retorna o id da última consulta INSERT
-	 *
-	 * @return false|string
+	 * @return bool|string
+	 * @throws Exception
 	 */
 	public function lastInsertId(): bool|string
 	{
@@ -44,9 +76,8 @@ abstract class ConnectDB
 	}
 
 	/**
-	 * Inicia uma transação
-	 *
 	 * @return bool
+	 * @throws Exception
 	 */
 	public function beginTransaction(): bool
 	{
@@ -54,9 +85,8 @@ abstract class ConnectDB
 	}
 
 	/**
-	 * Comita uma transação
-	 *
 	 * @return bool
+	 * @throws Exception
 	 */
 	public function commit(): bool
 	{
@@ -64,9 +94,8 @@ abstract class ConnectDB
 	}
 
 	/**
-	 * Realiza um rollback na transação
-	 *
 	 * @return bool
+	 * @throws Exception
 	 */
 	public function rollBack(): bool
 	{
